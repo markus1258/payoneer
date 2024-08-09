@@ -7,9 +7,6 @@
     - name: Clean yum cache
       command: yum clean all
 
-    - name: Check yum repos file
-      command: cat /etc/yum.repos.d/CentOS-Base.repo
-
     - name: Fix yum repo file to point to vault for old version support
       shell: |
         sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-*
