@@ -1,5 +1,6 @@
 # payoneer
 
+App is accessible on http://3.64.193.220/
 ### The CI
 - Will trigger upon push to branch main
 - Builds the image for the application located in `/payoneer` directory
