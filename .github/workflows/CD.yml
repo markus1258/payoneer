@@ -1,0 +1,43 @@
+name: CD
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types:
+      - completed
+    branches:
+      - main
+
+jobs:
+  deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout files
+        uses: actions/checkout@v4
+
+      - name: Import SSH key to local runner
+        run: |
+          echo "${{ secrets.EC2KEY }}" > pexamec2.pem  
+          chmod 400 pexamec2.pem
+
+      - name: Install ansible
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-pip
+          pip3 install ansible==2.9.27
+
+      - name: Run ansible
+        env: 
+          ANSIBLE_HOST_KEY_CHECKING: false
+        run: |
+          ansible-playbook -i ./payoneer/ansible/inventory.ini payoneer/ansible/ansible.yml
+
+      - name: Run docker image on EC2
+        uses: JimCronqvist/action-ssh@master
+        with:
+          hosts: '${{ secrets.EC2USER }}@${{ secrets.EC2HOST }}'
+          privateKey: ${{ secrets.EC2KEY }}
+          command: |
+            docker run -d -p  80:80 --name paywebsite markus1258/payoneer:latest

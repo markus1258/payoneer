@@ -1,0 +1,47 @@
+---
+- name: Prepare host for Docker
+  hosts: all
+  become: yes
+
+  tasks:     
+    - name: Clean yum cache
+      command: yum clean all
+
+    - name: Check yum repos file
+      command: cat /etc/yum.repos.d/CentOS-Base.repo
+
+    - name: Fix yum repo file to point to vault for old version support
+      shell: |
+        sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-*
+        sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-*
+
+    - name: Add Docker repo 
+      command: yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+
+    - name: Install Docker packages
+      yum:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-buildx-plugin
+          - docker-compose-plugin
+        state: present
+      register: docker_install
+
+    - name: CHMOD docker.sock
+      command: chmod 666 /var/run/docker.sock
+
+    - name: Start Docker
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Remove all containers
+      shell: docker rm -f $(docker ps -aq -f name=paywebsite)
+      ignore_errors: true
+
+    - name: Remove all images
+      shell: docker rmi -f $(docker images -q -f name=paywebsite)
+      ignore_errors: true
